@@ -2,6 +2,7 @@
 var express = require('express')
 var bodyParser = require('body-parser')
 var memjs = require('memjs')
+var Rx = require('rx');
 
 var projects = require('./projects.js')
 var dict = projects.setup();
@@ -11,6 +12,42 @@ var expiration = 600; // 10 minutes
 console.log("Loaded " + (dict.size + 1) + " projects into memory...");
 
 var github = require('./github.js')
+
+var array = { };
+
+var responses = github.computeIssueCounts(dict);
+
+responses.subscribe(
+  function (map) {
+    array[map.project] = map.count;
+  },
+  function (err) {
+    console.log('Error found in response');
+    console.log('Status Code: ' + err.statusCode);
+    console.log('Response: ' + err.response.body);
+  },
+  function () {
+      console.log('Completed, storing in memcached');
+
+      var key = "issue-count-all";
+      var client = memjs.Client.create();
+
+      var text = JSON.stringify(array);
+
+      console.log("Storing: " + text);
+
+      client.set(key, text, function(err, val) {
+        if (err != null) {
+          console.log(err);
+          return;
+        }
+
+        console.log("stored value: \'" + key + "\' - \'" + val.toString() + "\'");
+      }, 600);
+  }
+);
+
+
 
 // launch site
 var app = express()
