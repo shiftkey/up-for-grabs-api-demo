@@ -1,4 +1,3 @@
-
 var express = require('express')
 var bodyParser = require('body-parser')
 var memjs = require('memjs')
@@ -8,6 +7,10 @@ if (process.env.GITHUB_TOKEN == null) {
   console.warn("No GITHUB_TOKEN environment variable set, unauthenticated access is very limited...");
 } else {
   console.log("Found GITHUB_TOKEN environment variable, authenticated requests permit much more usage...");
+}
+
+if (process.env.AUTH_TOKEN == null) {
+  console.warn("No AUTH_TOKEN environment variable set, access to some actions will be restricted...");
 }
 
 var projects = require('./projects.js')
