@@ -61,11 +61,10 @@ app.get('/issues/count', function(request, response) {
 
       console.log("retrieving results for path: " + path);
 
-      var response = github.request(path, function(err, response){
-        var count = response.length;
+      var response = github.request(path, function(err, res){
+        var count = res.length;
 
-        console.log("TODO: count array in response");
-        console.log("TODO: cache response count ");
+        console.log("TODO: cache response count:" + count);
 
         response.send({ cached: false, result: count });
       });
