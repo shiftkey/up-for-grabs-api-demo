@@ -22,32 +22,6 @@ console.log("Loaded " + (dict.size + 1) + " projects into memory...");
 
 var github = require('./github.js')
 
-var array = { };
-
-var responses = github.computeIssueCounts(dict);
-
-responses.subscribe(
-  function (map) {
-    array[map.project] = map.count;
-  },
-  function (err) {
-    console.log('Error found in response');
-    console.log('Status Code: ' + err.statusCode);
-    console.log('Response: ' + err.response.body);
-  },
-  function () {
-      console.log('Completed, storing in memcached');
-
-      var client = memjs.Client.create();
-
-      client.set("issue-count-all", JSON.stringify(array), function(err, val) {
-        if (err != null) {
-          console.log(err);
-        }
-      }, expiration);
-  }
-);
-
 // launch site
 var app = express()
 
@@ -59,6 +33,51 @@ app.use(bodyParser.json());
 app.get('/meta', function(request, response) {
    response.send({ projects: dict.size });
 });
+
+app.get('/refresh', function(request, response) {
+
+  if (process.env.AUTH_TOKEN == null) {
+    response.status(403).send("unable to authenticate");
+    return;
+  }
+
+  if (request.get("Authorization") != "TOKEN " + process.env.AUTH_TOKEN) {
+    response.status(403).send("user not permitted");
+    return;
+  }
+
+  var array = { };
+
+  var responses = github.computeIssueCounts(dict);
+
+  responses.subscribe(
+    function (map) {
+      array[map.project] = map.count;
+    },
+    function (err) {
+      console.log('Error found in response');
+      console.log('Status Code: ' + err.statusCode);
+      console.log('Response: ' + err.response.body);
+    },
+    function () {
+        console.log('Completed, storing in memcached');
+
+        var client = memjs.Client.create();
+
+        client.set("issue-count-all", JSON.stringify(array), function(err, val) {
+          if (err != null) {
+            console.log(err);
+          }
+
+          response.send({ issueCount: array });
+
+        }, expiration);
+    }
+  );
+
+
+});
+
 
 // /issues/count?project={blah}
 // {blah} is just the project name - URL encoded/decoded
