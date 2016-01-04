@@ -24,8 +24,6 @@ exports.request = function (path, callback) {
 
   https.get(options, function(res)
   {
-    console.log("Got response: " + res.statusCode);
-
     res.on("data", function(chunk) {
       str += chunk;
     });
@@ -35,12 +33,8 @@ exports.request = function (path, callback) {
     });
 
     res.on('end', function () {
-      console.log("END: " + str);
-
       var result = JSON.parse(str);
-
       callback(null, result);
     });
   });
-
 }
