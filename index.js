@@ -55,13 +55,13 @@ app.get('/issues/count', function(request, response) {
     var isCached = err == null && val != null;
 
     if (!isCached) {
-      console.log("value for \'" + key + "\'not cached");
+      console.log("value for \'" + key + "\' not cached");
 
       var path = projectJson.issueCount;
 
-      console.log("Retrieving results for path: " + path);
+      console.log("retrieving results for path: " + path);
 
-      var response = github.request(uri);
+      var response = github.request(path);
 
       var count = response.length;
 
