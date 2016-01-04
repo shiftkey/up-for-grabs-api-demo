@@ -7,7 +7,9 @@
     "start": "node index.js"
   },
   "dependencies": {
-    "express": "^4.13.3"
+    "express": "^4.13.3",
+    "memjs": "^0.8.9",
+    "yamljs": "^0.2.4"
   },
   "engines": {
     "node": "4.0.0"
