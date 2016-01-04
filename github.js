@@ -53,6 +53,7 @@ exports.request = function (path, callback) {
 exports.computeIssueCounts = function(projects) {
 
   return Rx.Observable.from(projects)
+    .take(2)
     .select(function (project) {
 
       var name = project[0];
