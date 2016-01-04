@@ -1,7 +1,7 @@
 var https = require('https');
+var rp = require('request-promise');
 
-exports.request = function (path, callback) {
-
+var getAuthorizationHeader = function() {
   var authorization = "";
   if (process.env.GITHUB_TOKEN == null)
   {
@@ -10,12 +10,16 @@ exports.request = function (path, callback) {
     console.log("Found GITHUB_TOKEN variable, setting header...");
     authorization = 'Token ' + process.env.GITHUB_TOKEN;
   }
+  return authorization;
+}
+
+exports.request = function (path, callback) {
 
   var options = {
     host: 'api.github.com',
     path: path,
     headers: {
-      'Authorization': authorization,
+      'Authorization': getAuthorizationHeader(),
       'User-Agent': "Up For Grab Data Service"
     }
   };
