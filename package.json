@@ -7,6 +7,7 @@
     "start": "node index.js"
   },
   "dependencies": {
+    "body-parser": "^1.14.2",
     "express": "^4.13.3",
     "memjs": "^0.8.9",
     "yamljs": "^0.2.4"
