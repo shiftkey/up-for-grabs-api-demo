@@ -31,50 +31,22 @@ And that's it. And because we control the HTTP request here, we can set a Person
 
 A few things come to mind:
 
- - granularity of the API - should we return the issue count for all repos, not just specific ones
+ - granularity of the API endpoints
+
+Should we return the issue count for all repos, or keep the specific options? Or both? This will mean the client makes fewer requests, but we would then need to warm up the cache to get all the results first (which isn't so hard, but we're up to 175 projects on GitHub already)...
+
  - warming up the cache after deployment
- - move the data folder into a submodule reference - there's an upstream PR to fix the projects which can't be parsed in `yamljs`
 
-After that we can look at other sorts of data we can extract from the API.
+ This could be done by providing a restricted endpoint which can be called after a deployment (with the right token set) to refresh whatever has been stored
 
+ - move the data folder into a submodule reference
 
+ There's an upstream PR https://github.com/up-for-grabs/up-for-grabs.net/pull/302 to fix the projects which can't be parsed in `yamljs` due to being multi-line strings.
 
+ After that, I'll rewrite the history here to change that to a submodule.
 
-# node-js-sample
+ - get this behind a nice DNS record
 
-A barebones Node.js app using [Express 4](http://expressjs.com/).
+Something like `api.up-for-grabs.net`?
 
-## Running Locally
-
-Make sure you have [Node.js](http://nodejs.org/) and the [Heroku Toolbelt](https://toolbelt.heroku.com/) installed.
-
-```sh
-git clone git@github.com:heroku/node-js-sample.git # or clone your own fork
-cd node-js-sample
-npm install
-npm start
-```
-
-Your app should now be running on [localhost:5000](http://localhost:5000/).
-
-## Deploying to Heroku
-
-```
-heroku create
-git push heroku master
-heroku open
-```
-
-Alternatively, you can deploy your own copy of the app using the web-based flow:
-
-[![Deploy to Heroku](https://www.herokucdn.com/deploy/button.png)](https://heroku.com/deploy)
-
-## Documentation
-
-For more information about using Node.js on Heroku, see these Dev Center articles:
-
-- [10 Habits of a Happy Node Hacker](https://blog.heroku.com/archives/2014/3/11/node-habits)
-- [Getting Started with Node.js on Heroku](https://devcenter.heroku.com/articles/getting-started-with-nodejs)
-- [Heroku Node.js Support](https://devcenter.heroku.com/articles/nodejs-support)
-- [Node.js on Heroku](https://devcenter.heroku.com/categories/nodejs)
-- [Using WebSockets on Heroku with Node.js](https://devcenter.heroku.com/articles/node-websockets)
+After that we can look at migrating the existing website to leverage this sort of data.
