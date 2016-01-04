@@ -28,7 +28,6 @@ exports.request = function (path, callback) {
 
     res.on("data", function(chunk) {
       str += chunk;
-      console.log("BODY: " + chunk);
     });
 
     res.on('error', function(e) {
@@ -36,7 +35,7 @@ exports.request = function (path, callback) {
     });
 
     res.on('end', function () {
-      console.log(str);
+      console.log("END: " + str);
 
       var result = JSON.parse(str);
 
