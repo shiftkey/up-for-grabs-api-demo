@@ -76,8 +76,11 @@ app.get('/issues/count', function(request, response) {
       });
 
     } else {
-      console.log("value for \'" + key + "\' cached - got \'" + val.toString() + "\'");
-      response.send({ cached: isCached, result: val.toString() });
+      var str = val.toString();
+      var count = parseInt(str);
+
+      console.log("value for \'" + key + "\' cached - got \'" + str + "\'");
+      response.send({ cached: isCached, result: count });
     }
   });
 })
