@@ -64,13 +64,15 @@ app.get('/issues/count', function(request, response) {
       github.request(path, function(err, res){
         var count = res.length;
 
-        client.set(key, count, function(err, val) {
+        client.set(key, count.toString(), function(err, val) {
           if (err != null) {
             console.log(err);
           }
-        }, expiration);
 
-        response.send({ cached: false, result: count });
+          console.log("stored value: \'" + key + "\' - \'" + val.toString() + "\'");
+
+          response.send({ cached: false, result: count });
+        }, expiration);
       });
 
     } else {
