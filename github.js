@@ -15,7 +15,8 @@ exports.request = function (path, callback) {
     host: 'api.github.com',
     path: path,
     headers: {
-      'Authorization': authorization
+      'Authorization': authorization,
+      'User-Agent': "Up For Grab Data Service"
     }
   };
 
