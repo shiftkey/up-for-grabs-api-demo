@@ -35,20 +35,12 @@ responses.subscribe(
   function () {
       console.log('Completed, storing in memcached');
 
-      var key = "issue-count-all";
       var client = memjs.Client.create();
 
-      var text = JSON.stringify(array);
-
-      console.log("Storing: " + text);
-
-      client.set(key, text, function(err, val) {
+      client.set("issue-count-all", JSON.stringify(array), function(err, val) {
         if (err != null) {
           console.log(err);
-          return;
         }
-
-        console.log("stored value: \'" + key + "\' - \'" + val.toString() + "\'");
       }, expiration);
   }
 );
