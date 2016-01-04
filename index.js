@@ -32,8 +32,21 @@ app.get('/issues/count', function(request, response) {
 
   if (projectName == null)
   {
-     response.status(400).send('Missing querystring parameter: \'project\'');
-     return;
+    // no project specified -> return all results
+    var client = memjs.Client.create();
+    client.get("issue-count-all", function(err, val) {
+
+    if (err != null) {
+       console.log(err);
+       response.status(500).send('Unable to connect to store');
+    }
+
+     var text = val.toString();
+     var json = JSON.parse(text);
+
+     response.send(json);
+    });
+    return;
   }
 
   var projectJson = dict.get(projectName);
