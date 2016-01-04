@@ -11,7 +11,7 @@
     "express": "^4.13.3",
     "memjs": "^0.8.9",
     "request-promise": "^1.0.2",
-    "rxjs": "^5.0.0-beta.0",
+    "rx": "^4.0.7",
     "yamljs": "^0.2.4"
   },
   "engines": {
