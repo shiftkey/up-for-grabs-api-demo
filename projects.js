@@ -26,11 +26,11 @@ exports.setup = function () {
       var repo = values[2];
       var labelEncoded = encodeURI(label);
 
-      var issueCountUrl = "https://api.github.com/repos/" + owner + "/" + repo + "/issues?labels=" + labelEncoded + "&per_page=100";
+      var issueCountUrl = "/repos/" + owner + "/" + repo + "/issues?labels=" + labelEncoded + "&per_page=100";
 
       // TODO: attach some other properties here
 
-      var obj = { "issueCount": issueCountUrl};
+      var obj = { "issueCount": issueCountUrl };
 
       dict.set(nativeObject.name, obj);
     } else {

@@ -8,6 +8,8 @@ var dict = projects.setup();
 
 console.log("Loaded " + (dict.size + 1) + " projects into memory...");
 
+var github = require('./github.js')
+
 // launch site
 var app = express()
 
@@ -55,14 +57,18 @@ app.get('/issues/count', function(request, response) {
     if (!isCached) {
       console.log("value for \'" + key + "\'not cached");
 
-      var uri = projectJson.issueCount;
+      var path = projectJson.issueCount;
 
-      console.log("TODO: setup authenticated client");
-      console.log("TODO: invoke request: " + uri);
-      console.log("TODO: count entries: " + uri);
-      console.log("TODO: cache response: " + uri);
+      console.log("Retrieving results for path: " + path);
 
-      response.send({ cached: false, result: -1 });
+      var response = github.request(uri);
+
+      var count = response.length;
+
+      console.log("TODO: count array in response");
+      console.log("TODO: cache response count ");
+
+      response.send({ cached: false, result: count });
     } else {
       console.log("value for \'" + key + "\'cached - got \'" + val + "\'");
       response.send({ cached: isCached, result: val });
