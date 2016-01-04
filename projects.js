@@ -30,7 +30,7 @@ exports.setup = function () {
 
       // TODO: attach some other properties here
 
-      var obj = { "issue-count": issueCountUrl};
+      var obj = { "issueCount": issueCountUrl};
 
       dict.set(nativeObject.name, obj);
     } else {

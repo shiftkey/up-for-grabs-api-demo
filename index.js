@@ -55,7 +55,7 @@ app.get('/issues/count', function(request, response) {
     if (!isCached) {
       console.log("value for \'" + key + "\'not cached");
 
-      var uri = projectJson.issue-count;
+      var uri = projectJson.issueCount;
 
       console.log("TODO: setup authenticated client");
       console.log("TODO: invoke request: " + uri);
