@@ -34,7 +34,7 @@ exports.setup = function () {
 
       dict.set(nativeObject.name, obj);
     } else {
-      console.log("Project \'" + file + "\' does not integrate with GitHub, skipping...");
+      console.warn("Project \'" + file + "\' does not integrate with GitHub, skipping...");
     }
   }
 
