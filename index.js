@@ -74,8 +74,8 @@ app.get('/issues/count', function(request, response) {
       });
 
     } else {
-      console.log("value for \'" + key + "\' cached - got \'" + val + "\'");
-      response.send({ cached: isCached, result: val });
+      console.log("value for \'" + key + "\' cached - got \'" + val.toString() + "\'");
+      response.send({ cached: isCached, result: val.toString() });
     }
   });
 })
