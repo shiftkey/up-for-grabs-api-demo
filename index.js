@@ -6,6 +6,8 @@ var memjs = require('memjs')
 var projects = require('./projects.js')
 var dict = projects.setup();
 
+var expiration = 600; // 10 minutes
+
 console.log("Loaded " + (dict.size + 1) + " projects into memory...");
 
 var github = require('./github.js')
@@ -59,12 +61,14 @@ app.get('/issues/count', function(request, response) {
 
       var path = projectJson.issueCount;
 
-      console.log("retrieving results for path: " + path);
-
       github.request(path, function(err, res){
         var count = res.length;
 
-        console.log("TODO: cache response count:" + count);
+        client.set(key, count, function(err, val) {
+          if (err != null) {
+            console.log(err);
+          }
+        }, expiration);
 
         response.send({ cached: false, result: count });
       });
