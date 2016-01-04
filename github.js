@@ -1,27 +1,34 @@
 var https = require('https');
 var rp = require('request-promise');
+var Rx = require('rx');
 
 var getAuthorizationHeader = function() {
-  var authorization = "";
   if (process.env.GITHUB_TOKEN == null)
   {
     console.log("No environment variable set for GitHub token, unauthenticated client is very restricted...");
   } else {
     console.log("Found GITHUB_TOKEN variable, setting header...");
-    authorization = 'Token ' + process.env.GITHUB_TOKEN;
   }
-  return authorization;
+  return process.env.GITHUB_TOKEN;
 }
 
 exports.request = function (path, callback) {
 
+  var headers = {
+      'User-Agent': "Up For Grab Data Service"
+  };
+
+  var authorization = getAuthorizationHeader();
+
+  if (authorization != null)
+  {
+     headers['Authorization'] = "Token " + authorization;
+  }
+
   var options = {
     host: 'api.github.com',
     path: path,
-    headers: {
-      'Authorization': getAuthorizationHeader(),
-      'User-Agent': "Up For Grab Data Service"
-    }
+    headers: headers
   };
 
   var str = '';
@@ -41,4 +48,38 @@ exports.request = function (path, callback) {
       callback(null, result);
     });
   });
+}
+
+exports.computeIssueCounts = function(projects) {
+
+  return Rx.Observable.from(projects)
+    .select(function (project) {
+
+      var name = project[0];
+      var url = project[1].issueCount;
+
+      var headers = {
+          'User-Agent': "Up For Grab Data Service"
+      };
+
+      var authorization = getAuthorizationHeader();
+      if (authorization != null)
+      {
+         headers['Authorization'] = "Token " + authorization;
+      }
+
+      var options = {
+          uri: 'https://api.github.com' + url,
+          headers: headers,
+          json: true
+      };
+
+      var promise = rp(options);
+
+      return Rx.Observable.fromPromise(promise)
+        .select(function(issues) {
+            return { 'project': name, 'count': issues.length }
+        });
+    })
+    .mergeAll();
 }
