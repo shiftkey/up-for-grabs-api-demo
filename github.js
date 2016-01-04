@@ -2,27 +2,15 @@ var https = require('https');
 var rp = require('request-promise');
 var Rx = require('rx');
 
-var getAuthorizationHeader = function() {
-  if (process.env.GITHUB_TOKEN == null)
-  {
-    console.log("No environment variable set for GitHub token, unauthenticated client is very restricted...");
-  } else {
-    console.log("Found GITHUB_TOKEN variable, setting header...");
-  }
-  return process.env.GITHUB_TOKEN;
-}
-
 exports.request = function (path, callback) {
 
   var headers = {
       'User-Agent': "Up For Grab Data Service"
   };
 
-  var authorization = getAuthorizationHeader();
-
-  if (authorization != null)
+  if (process.env.GITHUB_TOKEN != null)
   {
-     headers['Authorization'] = "Token " + authorization;
+     headers['Authorization'] = "Token " + process.env.GITHUB_TOKEN;
   }
 
   var options = {
@@ -59,14 +47,15 @@ exports.computeIssueCounts = function(projects) {
       var name = project[0];
       var url = project[1].issueCount;
 
+      console.log("Fetching issue count for project: \'" + name + "\'...")
+
       var headers = {
           'User-Agent': "Up For Grab Data Service"
       };
 
-      var authorization = getAuthorizationHeader();
-      if (authorization != null)
+      if (process.env.GITHUB_TOKEN != null)
       {
-         headers['Authorization'] = "Token " + authorization;
+         headers['Authorization'] = "Token " + process.env.GITHUB_TOKEN;
       }
 
       var options = {

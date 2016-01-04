@@ -4,6 +4,12 @@ var bodyParser = require('body-parser')
 var memjs = require('memjs')
 var Rx = require('rx');
 
+if (process.env.GITHUB_TOKEN == null) {
+  console.warn("No GITHUB_TOKEN environment variable set, unauthenticated access is very limited...");
+} else {
+  console.log("Found GITHUB_TOKEN environment variable, authenticated requests permit much more usage...");
+}
+
 var projects = require('./projects.js')
 var dict = projects.setup();
 
@@ -43,7 +49,7 @@ responses.subscribe(
         }
 
         console.log("stored value: \'" + key + "\' - \'" + val.toString() + "\'");
-      }, 600);
+      }, expiration);
   }
 );
 
