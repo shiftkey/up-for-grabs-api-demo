@@ -37,16 +37,17 @@ Should we return the issue count for all repos, or keep the specific options? Or
 
  - warming up the cache after deployment
 
- This could be done by providing a restricted endpoint which can be called after a deployment (with the right token set) to refresh whatever has been stored
+This could be done by providing a restricted endpoint which can be called after a deployment (with the right token set) to refresh whatever has been stored
 
  - move the data folder into a submodule reference
 
- There's an upstream PR https://github.com/up-for-grabs/up-for-grabs.net/pull/302 to fix the projects which can't be parsed in `yamljs` due to being multi-line strings.
+There's an upstream PR https://github.com/up-for-grabs/up-for-grabs.net/pull/302 to fix the projects which can't be parsed in `yamljs` due to being multi-line strings.
 
- After that, I'll rewrite the history here to change that to a submodule.
+After that, I'll rewrite the history here to change that to a submodule.
 
  - get this behind a nice DNS record
 
 Something like `api.up-for-grabs.net`?
+
 
 After that we can look at migrating the existing website to leverage this sort of data.
