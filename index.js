@@ -48,34 +48,34 @@ app.get('/refresh', function(request, response) {
 
   var array = { };
 
-  var responses = github.computeIssueCounts(dict);
+  github
+    .computeIssueCounts(dict)
+    .subscribe(
+      function (map) {
+        array[map.project] = map.count;
+      },
+      function (err) {
+        console.log('Error found in response');
+        console.log('Status Code: ' + err.statusCode);
+        console.log('Response: ' + err.response.body);
 
-  responses.subscribe(
-    function (map) {
-      array[map.project] = map.count;
-    },
-    function (err) {
-      console.log('Error found in response');
-      console.log('Status Code: ' + err.statusCode);
-      console.log('Response: ' + err.response.body);
-    },
-    function () {
-        console.log('Completed, storing in memcached');
+        response.status(500).send("something happened");
+      },
+      function () {
+          console.log('Completed, storing in memcached');
 
-        var client = memjs.Client.create();
+          var client = memjs.Client.create();
 
-        client.set("issue-count-all", JSON.stringify(array), function(err, val) {
-          if (err != null) {
-            console.log(err);
-          }
+          client.set("issue-count-all", JSON.stringify(array), function(err, val) {
+            if (err != null) {
+              console.log(err);
+            }
 
-          response.send({ issueCount: array });
+            response.send({ issueCount: array });
 
-        }, expiration);
-    }
-  );
-
-
+          }, expiration);
+      }
+    );
 });
 
 
