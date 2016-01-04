@@ -2,7 +2,7 @@ var https = require('https');
 var rp = require('request-promise');
 var Rx = require('rx');
 
-exports.request = function (path, callback) {
+var request = function (path) {
 
   var headers = {
       'User-Agent': "Up For Grab Data Service"
@@ -14,29 +14,17 @@ exports.request = function (path, callback) {
   }
 
   var options = {
-    host: 'api.github.com',
-    path: path,
-    headers: headers
+      uri: 'https://api.github.com' + path,
+      headers: headers,
+      json: true
   };
 
-  var str = '';
+  var promise = rp(options);
 
-  https.get(options, function(res)
-  {
-    res.on("data", function(chunk) {
-      str += chunk;
-    });
+  return Rx.Observable.fromPromise(promise);
+};
 
-    res.on('error', function(e) {
-      callback(e, null);
-    });
-
-    res.on('end', function () {
-      var result = JSON.parse(str);
-      callback(null, result);
-    });
-  });
-}
+exports.request = request;
 
 exports.computeIssueCounts = function(projects) {
 
@@ -49,24 +37,7 @@ exports.computeIssueCounts = function(projects) {
 
       console.log("Fetching issue count for project: \'" + name + "\'...")
 
-      var headers = {
-          'User-Agent': "Up For Grab Data Service"
-      };
-
-      if (process.env.GITHUB_TOKEN != null)
-      {
-         headers['Authorization'] = "Token " + process.env.GITHUB_TOKEN;
-      }
-
-      var options = {
-          uri: 'https://api.github.com' + url,
-          headers: headers,
-          json: true
-      };
-
-      var promise = rp(options);
-
-      return Rx.Observable.fromPromise(promise)
+      return request(url)
         .select(function(issues) {
             return { 'project': name, 'count': issues.length }
         });

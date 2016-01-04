@@ -53,8 +53,6 @@ responses.subscribe(
   }
 );
 
-
-
 // launch site
 var app = express()
 
@@ -79,16 +77,16 @@ app.get('/issues/count', function(request, response) {
     var client = memjs.Client.create();
     client.get("issue-count-all", function(err, val) {
 
-    if (err != null) {
-       console.log(err);
-       response.status(500).send('Unable to connect to store');
-    }
+      if (err != null) {
+         console.log(err);
+         response.status(500).send('Unable to connect to store');
+      }
 
-     var text = val.toString();
-     var json = JSON.parse(text);
+       var text = val.toString();
+       var json = JSON.parse(text);
 
-     response.send(json);
-    });
+       response.send(json);
+      });
     return;
   }
 
@@ -115,20 +113,29 @@ app.get('/issues/count', function(request, response) {
     if (!isCached) {
       console.log("value for \'" + key + "\' not cached");
 
-      github.request(projectJson.issueCount, function(err, res){
-        var count = res.length;
+      github
+        .request(projectJson.issueCount)
+        .subscribe(
+          function (issues) {
+            var count = issues.length;
 
-        client.set(key, count.toString(), function(err, val) {
-          if (err != null) {
-            console.log(err);
+            client.set(key, count.toString(), function(err, val) {
+              if (err != null) {
+                console.log(err);
+              }
+
+              console.log("stored value: \'" + key + "\' - \'" + val.toString() + "\'");
+
+              response.send({ cached: false, result: count });
+            }, expiration);
+
+          },
+          function (err) {
+            console.log('Error found in response');
+            console.log('Status Code: ' + err.statusCode);
+            console.log('Response: ' + err.response.body);
           }
-
-          console.log("stored value: \'" + key + "\' - \'" + val.toString() + "\'");
-
-          response.send({ cached: false, result: count });
-        }, expiration);
-      });
-
+      );
     } else {
       var str = val.toString();
       var count = parseInt(str);
