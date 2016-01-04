@@ -1,12 +1,13 @@
 var https = require('https');
 
-exports.request = function (path) {
+exports.request = function (path, callback) {
 
   var authorization = "";
   if (process.env.GITHUB_TOKEN == null)
   {
     console.log("No environment variable set for GitHub token, unauthenticated client is very restricted...");
   } else {
+    console.log("Found GITHUB_TOKEN variable, setting header...");
     authorization = 'Token ' + process.env.GITHUB_TOKEN;
   }
 
@@ -20,19 +21,26 @@ exports.request = function (path) {
 
   var str = '';
 
-  callback = function(response) {
-    //another chunk of data has been recieved, so append it to `str`
-    response.on('data', function (chunk) {
+  https.get(options, function(res)
+  {
+    console.log("Got response: " + res.statusCode);
+
+    res.on("data", function(chunk) {
       str += chunk;
+      console.log("BODY: " + chunk);
     });
 
-    //the whole response has been recieved, so we just print it out here
-    response.on('end', function () {
+    res.on('error', function(e) {
+      callback(e, null);
+    });
+
+    res.on('end', function () {
       console.log(str);
+
+      var result = JSON.parse(str);
+
+      callback(null, result);
     });
-  }
+  });
 
-  https.request(options, callback).end();
-
-  return JSON.parse(str);
 }
