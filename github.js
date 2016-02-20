@@ -24,18 +24,15 @@ var request = function (path) {
   return Rx.Observable.fromPromise(promise);
 };
 
-exports.request = request;
-
-exports.computeIssueCounts = function(projects) {
-
+var computeIssueCounts = function(projects, urlProperty) {
   return Rx.Observable.from(projects)
     .take(2)
     .select(function (project) {
 
       var name = project[0];
-      var url = project[1].issueCount;
+      var url = project[1][urlProperty];
 
-      console.log("Fetching issue count for project: \'" + name + "\'...")
+      console.log("Fetching issue count (" + urlProperty + ") for project: \'" + name + "\'...")
 
       return request(url)
         .select(function(issues) {
@@ -43,4 +40,14 @@ exports.computeIssueCounts = function(projects) {
         });
     })
     .mergeAll();
+}
+
+exports.request = request;
+
+exports.computeOpenIssueCounts = function(projects) {
+  return computeIssueCounts(projects, "openIssueCount");
+}
+
+exports.computeClosedIssueCounts = function(projects) {
+  return computeIssueCounts(projects, "closedIssueCount");
 }

@@ -1,7 +1,8 @@
 var express = require('express')
 var bodyParser = require('body-parser')
-var memjs = require('memjs')
 var Rx = require('rx');
+var cache = require('./cache.js')
+var issueCounts = require('./issue-counts.js')
 
 if (process.env.GITHUB_TOKEN == null) {
   console.warn("No GITHUB_TOKEN environment variable set, unauthenticated access is very limited...");
@@ -15,8 +16,6 @@ if (process.env.AUTH_TOKEN == null) {
 
 var projects = require('./projects.js')
 var dict = projects.setup();
-
-var expiration = 600; // 10 minutes
 
 console.log("Loaded " + (dict.size + 1) + " projects into memory...");
 
@@ -46,36 +45,15 @@ app.get('/refresh', function(request, response) {
     return;
   }
 
-  var array = { };
+  issueCounts.refresh(dict, function (err) {
+    console.log('Error found in response');
+    console.log('Status Code: ' + err.statusCode);
+    console.log('Response: ' + err.response.body);
 
-  github
-    .computeIssueCounts(dict)
-    .subscribe(
-      function (map) {
-        array[map.project] = map.count;
-      },
-      function (err) {
-        console.log('Error found in response');
-        console.log('Status Code: ' + err.statusCode);
-        console.log('Response: ' + err.response.body);
-
-        response.status(500).send("something happened");
-      },
-      function () {
-          console.log('Completed, storing in memcached');
-
-          var client = memjs.Client.create();
-
-          client.set("issue-count-all", JSON.stringify(array), function(err, val) {
-            if (err != null) {
-              console.log(err);
-            }
-
-            response.send({ issueCount: array });
-
-          }, expiration);
-      }
-    );
+    response.status(500).send("something happened");
+  }, function(counts) {
+    response.send(counts);
+  });
 });
 
 
@@ -88,19 +66,13 @@ app.get('/issues/count', function(request, response) {
   if (projectName == null)
   {
     // no project specified -> return all results
-    var client = memjs.Client.create();
-    client.get("issue-count-all", function(err, val) {
-
-      if (err != null) {
-         console.log(err);
-         response.status(500).send('Unable to connect to store');
-      }
-
-       var text = val.toString();
-       var json = JSON.parse(text);
-
-       response.send(json);
-      });
+    issueCounts.getAll(function(msg) {
+      response.status(500).send(msg);
+    }, function() {
+      response.status(204).send();
+    }, function(json) {
+      response.send(json);
+    });
     return;
   }
 
@@ -112,54 +84,11 @@ app.get('/issues/count', function(request, response) {
      return;
   }
 
-  var key = "issue-count-" + projectName;
-
-  var client = memjs.Client.create();
-  client.get(key, function(err, val) {
-
-    if (err != null) {
-      console.log(err);
-      response.status(500).send('Unable to connect to database');
-    }
-
-    var isCached = err == null && val != null;
-
-    if (!isCached) {
-      console.log("value for \'" + key + "\' not cached");
-
-      github
-        .request(projectJson.issueCount)
-        .subscribe(
-          function (issues) {
-            var count = issues.length;
-
-            client.set(key, count.toString(), function(err, val) {
-              if (err != null) {
-                console.log(err);
-              }
-
-              console.log("stored value: \'" + key + "\' - \'" + val.toString() + "\'");
-
-              response.send({ cached: false, result: count });
-            }, expiration);
-
-          },
-          function (err) {
-            console.log('Error found in response');
-            console.log('Status Code: ' + err.statusCode);
-            console.log('Response: ' + err.response.body);
-
-            response.status(500).send("something happened");
-          }
-      );
-    } else {
-      var str = val.toString();
-      var count = parseInt(str);
-
-      console.log("value for \'" + key + "\' cached - got \'" + str + "\'");
-      response.send({ cached: isCached, result: count });
-    }
-  });
+  issueCounts.getProject(projectJson, function(msg) {
+    response.status(500).send(msg);
+  }, function(result) {
+    response.send(result);
+  })
 })
 
 app.listen(app.get('port'), function() {

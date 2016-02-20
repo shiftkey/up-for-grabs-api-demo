@@ -27,10 +27,17 @@ exports.setup = function () {
       var labelEncoded = encodeURI(label);
 
       var issueCountUrl = "/repos/" + owner + "/" + repo + "/issues?labels=" + labelEncoded + "&per_page=100";
+      var closedIssueCountUrl = issueCountUrl + "&state=closed"
+      var openIssueCountUrl = issueCountUrl + "&state=open";
 
-      // TODO: attach some other properties here
+      var contributorsUrl = "/repos/:owner/:repo/stats/contributors";
 
-      var obj = { "issueCount": issueCountUrl };
+      var obj = {
+        "name": nativeObject.name,
+        "closedIssueCount": closedIssueCountUrl,
+        "openIssueCount": openIssueCountUrl,
+        "contributors": contributorsUrl
+      };
 
       dict.set(nativeObject.name, obj);
     } else {
