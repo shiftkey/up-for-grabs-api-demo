@@ -1,9 +1,14 @@
 var https = require('https');
 var rp = require('request-promise');
 var Rx = require('rx');
+var parseLinkHeader = require('parse-link-header');
+var Promise = require('promise');
 
-var request = function (path) {
+var requestPath = function(path) {
+  return request('https://api.github.com' + path);
+}
 
+var request = function (uri) {
   var headers = {
       'User-Agent': "Up For Grab Data Service"
   };
@@ -14,9 +19,10 @@ var request = function (path) {
   }
 
   var options = {
-      uri: 'https://api.github.com' + path,
+      uri: uri,
       headers: headers,
-      json: true
+      json: true,
+      resolveWithFullResponse: true
   };
 
   var promise = rp(options);
@@ -30,13 +36,28 @@ var getProjectIssueCount = function(project, urlProperty) {
   return getProjectCount(name, url, urlProperty);
 }
 
-var getProjectCount = function(name, url, key) {
+var getProjectCount = function(name, path, key) {
   console.log("Fetching issue count (" + key + ") for project: \'" + name + "\'...");
 
-  return request(url)
-    .select(function(items) {
-        return { 'project': name, 'count': items.length, 'type': key };
-    });
+  return requestPath(path)
+    .select(function(response) {
+        var rawLinkHeader = response.headers['link'];
+        if(rawLinkHeader) {
+          console.log("Making second request to get total count for " + name + " (" + key + ")")
+          var last = parseLinkHeader(rawLinkHeader).last;
+
+          return request(last.url).select(function(response) {
+            var lastPageCount = response.body.length;
+            var count = (parseInt(last.per_page) * (parseInt(last.page) - 1)) + lastPageCount;
+            return { 'project': name, 'count': count, 'type': key }
+          });
+        }
+
+        return Rx.Observable.fromPromise(
+          Promise.resolve({ 'project': name, 'count': response.body.length, 'type': key })
+        );
+    })
+    .mergeAll();
 }
 
 var computeIssueCounts = function(projects, urlProperty) {
@@ -70,15 +91,13 @@ var getProjectStats = function(project, initialiser) {
   }, initialiser);
 };
 
-exports.request = request;
-
 exports.getProjectStats = function(project, success, error) {
   getProjectStats(project).subscribe(success, error);
 }
 
 exports.computeStats = function(projects, success, error) {
   var statObservers = Rx.Observable.from(projects)
-    .take(2)
+    .take(20)
     .select(function(projectEntry) {
       var project = projectEntry[1];
       return getProjectStats(project, { name: project.name });
