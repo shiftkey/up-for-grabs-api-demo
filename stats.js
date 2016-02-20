@@ -22,26 +22,26 @@ exports.getProject = function(project, error, success) {
       if (!isCached) {
         console.log("value for \'" + key + "\' not cached");
 
-        var issueCounts = Rx.Observable.merge(
+        var stats = Rx.Observable.merge(
           github.getProjectOpenIssueCount(project),
           github.getProjectClosedIssueCount(project)
         );
 
-        issueCounts
+        stats
           .reduce(function (result, stat, i, source) {
             result[stat.type] = stat.count;
             return result;
           }, {})
           .subscribe(
-            function (stats) {
-              cache.set(key, stats, function(err, val) {
+            function (results) {
+              cache.set(key, results, function(err, val) {
                 if (err != null) {
                   console.log(err);
                 }
 
-                console.log("stored value: \'" + key + "\' - \'" + JSON.stringify(stats) + "\'");
+                console.log("stored value: \'" + key + "\' - \'" + JSON.stringify(results) + "\'");
 
-                success({ cached: false, stats: stats });
+                success({ cached: false, stats: results });
               }, expiration);
 
             },
@@ -84,12 +84,12 @@ exports.getAll = function(error, cacheMiss, success) {
 }
 
 exports.refresh = function(projects, error, success) {
-  var issueCounts = Rx.Observable.merge(
+  var stats = Rx.Observable.merge(
     github.computeOpenIssueCounts(projects),
     github.computeClosedIssueCounts(projects)
   );
 
-  issueCounts
+  stats
     .reduce(function (results, stat, i, source) {
       var project = results[stat.project];
       if(!project) {

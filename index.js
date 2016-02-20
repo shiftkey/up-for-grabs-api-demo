@@ -2,7 +2,7 @@ var express = require('express')
 var bodyParser = require('body-parser')
 var Rx = require('rx');
 var cache = require('./cache.js')
-var issueCounts = require('./issue-counts.js')
+var stats = require('./stats.js')
 
 if (process.env.GITHUB_TOKEN == null) {
   console.warn("No GITHUB_TOKEN environment variable set, unauthenticated access is very limited...");
@@ -45,7 +45,7 @@ app.get('/refresh', function(request, response) {
     return;
   }
 
-  issueCounts.refresh(dict, function (err) {
+  stats.refresh(dict, function (err) {
     console.log('Error found in response');
     console.log('Status Code: ' + err.statusCode);
     console.log('Response: ' + err.response.body);
@@ -66,7 +66,7 @@ app.get('/issues/count', function(request, response) {
   if (projectName == null)
   {
     // no project specified -> return all results
-    issueCounts.getAll(function(msg) {
+    stats.getAll(function(msg) {
       response.status(500).send(msg);
     }, function() {
       response.status(204).send();
@@ -84,7 +84,7 @@ app.get('/issues/count', function(request, response) {
      return;
   }
 
-  issueCounts.getProject(projectJson, function(msg) {
+  stats.getProject(projectJson, function(msg) {
     response.status(500).send(msg);
   }, function(result) {
     response.send(result);
