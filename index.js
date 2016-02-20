@@ -45,12 +45,8 @@ app.get('/refresh', function(request, response) {
     return;
   }
 
-  stats.refresh(dict, function (err) {
-    console.log('Error found in response');
-    console.log('Status Code: ' + err.statusCode);
-    console.log('Response: ' + err.response.body);
-
-    response.status(500).send("something happened");
+  stats.refresh(dict, function (msg) {
+    response.status(500).send(msg);
   }, function(counts) {
     response.send(counts);
   });
@@ -70,8 +66,8 @@ app.get('/issues/count', function(request, response) {
       response.status(500).send(msg);
     }, function() {
       response.status(204).send();
-    }, function(json) {
-      response.send(json);
+    }, function(projects) {
+      response.send({ projects: projects });
     });
     return;
   }

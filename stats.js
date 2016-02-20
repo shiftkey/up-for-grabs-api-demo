@@ -1,7 +1,6 @@
 
 var cache = require('./cache.js')
 var github = require('./github.js')
-var Rx = require('rx');
 
 var expiration = 600; // 10 minutes
 
@@ -22,36 +21,23 @@ exports.getProject = function(project, error, success) {
       if (!isCached) {
         console.log("value for \'" + key + "\' not cached");
 
-        var stats = Rx.Observable.merge(
-          github.getProjectOpenIssueCount(project),
-          github.getProjectClosedIssueCount(project)
-        );
-
-        stats
-          .reduce(function (result, stat, i, source) {
-            result[stat.type] = stat.count;
-            return result;
-          }, {})
-          .subscribe(
-            function (results) {
-              cache.set(key, results, function(err, val) {
-                if (err != null) {
-                  console.log(err);
-                }
-
-                console.log("stored value: \'" + key + "\' - \'" + JSON.stringify(results) + "\'");
-
-                success({ cached: false, stats: results });
-              }, expiration);
-
-            },
-            function (err) {
-              console.log('Error found in response');
-              console.log('Status Code: ' + err.statusCode);
-              console.log('Response: ' + err.response.body);
-              error("something happened");
+        var stats = github.getProjectStats(project, function (results) {
+          cache.set(key, results, function(err, val) {
+            if (err != null) {
+              console.log(err);
             }
-        );
+
+            console.log("stored value: \'" + key + "\' - \'" + JSON.stringify(results) + "\'");
+
+            success({ cached: false, stats: results });
+          }, expiration);
+
+        }, function (err) {
+          console.log('Error found in response');
+          console.log('Status Code: ' + err.statusCode);
+          console.log('Response: ' + err.response.body);
+          error("something happened");
+        });
       } else {
         var str = val.toString();
         var stats = JSON.parse(str);
@@ -80,38 +66,27 @@ exports.getAll = function(error, cacheMiss, success) {
 
      success(json);
     });
-
 }
 
 exports.refresh = function(projects, error, success) {
-  var stats = Rx.Observable.merge(
-    github.computeOpenIssueCounts(projects),
-    github.computeClosedIssueCounts(projects)
-  );
+  var stats = github.computeStats(projects, function (results) {
+      console.log('Completed, storing in memcached');
 
-  stats
-    .reduce(function (results, stat, i, source) {
-      var project = results[stat.project];
-      if(!project) {
-        results[stat.project] = project = {};
-      }
+      cache.set(OPEN_ISSUE_COUNT_ALL_KEY, results, function(err, val) {
+        if (err != null) {
+          console.log(err);
+        }
 
-      project[stat.type] = stat.count;
-      return results;
-    }, {})
-    .subscribe(
-      function (results) {
-          console.log('Completed, storing in memcached');
+        success({ projects: results });
 
-          cache.set(OPEN_ISSUE_COUNT_ALL_KEY, results, function(err, val) {
-            if (err != null) {
-              console.log(err);
-            }
-
-            success({ projects: results });
-
-          }, expiration);
-      },
-      error
-    );
+      }, expiration);
+  },
+  function (err) {
+    // TODO detect different types of errors i.e. http vs broken code
+    //console.log('Error found in response');
+    //console.log('Status Code: ' + err.statusCode);
+    //console.log('Response: ' + err.response.body);
+    console.log(err);
+    error("something happened");
+  });
 }
