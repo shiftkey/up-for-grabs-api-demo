@@ -1,6 +1,7 @@
 
 var cache = require('./cache.js')
 var github = require('./github.js')
+var Rx = require('rx');
 
 var expiration = 600; // 10 minutes
 
@@ -8,7 +9,6 @@ var OPEN_ISSUE_COUNT_ALL_KEY = "issue-count-open-all";
 var OPEN_ISSUE_COUNT_PROJECT_PREFIX = "issue-count-open-";
 
 exports.getProject = function(project, error, success) {
-
     var key = OPEN_ISSUE_COUNT_PROJECT_PREFIX + project.name;
 
     cache.get(key, function(err, val) {
@@ -22,20 +22,26 @@ exports.getProject = function(project, error, success) {
       if (!isCached) {
         console.log("value for \'" + key + "\' not cached");
 
-        github
-          .request(project.openIssueCount)
-          .subscribe(
-            function (issues) {
-              var count = issues.length;
+        var issueCounts = Rx.Observable.merge(
+          github.getProjectOpenIssueCount(project),
+          github.getProjectClosedIssueCount(project)
+        );
 
-              cache.set(key, count, function(err, val) {
+        issueCounts
+          .reduce(function (result, stat, i, source) {
+            result[stat.type] = stat.count;
+            return result;
+          }, {})
+          .subscribe(
+            function (stats) {
+              cache.set(key, stats, function(err, val) {
                 if (err != null) {
                   console.log(err);
                 }
 
-                console.log("stored value: \'" + key + "\' - \'" + val.toString() + "\'");
+                console.log("stored value: \'" + key + "\' - \'" + JSON.stringify(stats) + "\'");
 
-                success({ cached: false, openIssueCount: count });
+                success({ cached: false, stats: stats });
               }, expiration);
 
             },
@@ -48,10 +54,10 @@ exports.getProject = function(project, error, success) {
         );
       } else {
         var str = val.toString();
-        var count = parseInt(str);
+        var stats = JSON.parse(str);
 
         console.log("value for \'" + key + "\' cached - got \'" + str + "\'");
-        success({ cached: isCached, openIssueCount: count });
+        success({ cached: isCached, stats: stats });
       }
     });
 }
@@ -78,26 +84,34 @@ exports.getAll = function(error, cacheMiss, success) {
 }
 
 exports.refresh = function(projects, error, success) {
-  var array = { };
+  var issueCounts = Rx.Observable.merge(
+    github.computeOpenIssueCounts(projects),
+    github.computeClosedIssueCounts(projects)
+  );
 
-  github
-    .computeOpenIssueCounts(projects)
+  issueCounts
+    .reduce(function (results, stat, i, source) {
+      var project = results[stat.project];
+      if(!project) {
+        results[stat.project] = project = {};
+      }
+
+      project[stat.type] = stat.count;
+      return results;
+    }, {})
     .subscribe(
-      function (map) {
-        array[map.project] = map.count;
-      },
-      error,
-      function () {
+      function (results) {
           console.log('Completed, storing in memcached');
 
-          cache.set(OPEN_ISSUE_COUNT_ALL_KEY, array, function(err, val) {
+          cache.set(OPEN_ISSUE_COUNT_ALL_KEY, results, function(err, val) {
             if (err != null) {
               console.log(err);
             }
 
-            success({ openIssueCounts: array });
+            success({ projects: results });
 
           }, expiration);
-      }
+      },
+      error
     );
 }
