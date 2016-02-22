@@ -21,6 +21,7 @@ var expiration = 600; // 10 minutes
 console.log("Loaded " + (dict.size + 1) + " projects into memory...");
 
 var github = require('./github.js')
+var observables = require('./observables.js')
 
 // launch site
 var app = express()
@@ -55,11 +56,7 @@ app.get('/refresh', function(request, response) {
         array[map.project] = map.count;
       },
       function (err) {
-        console.log('Error found in response');
-        console.log('Status Code: ' + err.statusCode);
-        console.log('Response: ' + err.response.body);
-
-        response.status(500).send("something happened");
+        observables.log(err, response);
       },
       function () {
           console.log('Completed, storing in memcached');
@@ -145,11 +142,7 @@ app.get('/issues/count', function(request, response) {
 
           },
           function (err) {
-            console.log('Error found in response');
-            console.log('Status Code: ' + err.statusCode);
-            console.log('Response: ' + err.response.body);
-
-            response.status(500).send("something happened");
+            observables.log(err, response);
           }
       );
     } else {
