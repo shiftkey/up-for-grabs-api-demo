@@ -1,40 +1,46 @@
 var https = require('https');
+var rp = require('request-promise');
+var Rx = require('rx');
 
-exports.request = function (path, callback) {
+var request = function (path) {
 
-  var authorization = "";
-  if (process.env.GITHUB_TOKEN == null)
+  var headers = {
+      'User-Agent': "Up For Grab Data Service"
+  };
+
+  if (process.env.GITHUB_TOKEN != null)
   {
-    console.log("No environment variable set for GitHub token, unauthenticated client is very restricted...");
-  } else {
-    console.log("Found GITHUB_TOKEN variable, setting header...");
-    authorization = 'Token ' + process.env.GITHUB_TOKEN;
+     headers['Authorization'] = "Token " + process.env.GITHUB_TOKEN;
   }
 
   var options = {
-    host: 'api.github.com',
-    path: path,
-    headers: {
-      'Authorization': authorization,
-      'User-Agent': "Up For Grab Data Service"
-    }
+      uri: 'https://api.github.com' + path,
+      headers: headers,
+      json: true
   };
 
-  var str = '';
+  var promise = rp(options);
 
-  https.get(options, function(res)
-  {
-    res.on("data", function(chunk) {
-      str += chunk;
-    });
+  return Rx.Observable.fromPromise(promise);
+};
 
-    res.on('error', function(e) {
-      callback(e, null);
-    });
+exports.request = request;
 
-    res.on('end', function () {
-      var result = JSON.parse(str);
-      callback(null, result);
-    });
-  });
+exports.computeIssueCounts = function(projects) {
+
+  return Rx.Observable.from(projects)
+    .take(2)
+    .select(function (project) {
+
+      var name = project[0];
+      var url = project[1].issueCount;
+
+      console.log("Fetching issue count for project: \'" + name + "\'...")
+
+      return request(url)
+        .select(function(issues) {
+            return { 'project': name, 'count': issues.length }
+        });
+    })
+    .mergeAll();
 }

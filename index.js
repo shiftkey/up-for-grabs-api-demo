@@ -1,7 +1,17 @@
-
 var express = require('express')
 var bodyParser = require('body-parser')
 var memjs = require('memjs')
+var Rx = require('rx');
+
+if (process.env.GITHUB_TOKEN == null) {
+  console.warn("No GITHUB_TOKEN environment variable set, unauthenticated access is very limited...");
+} else {
+  console.log("Found GITHUB_TOKEN environment variable, authenticated requests permit much more usage...");
+}
+
+if (process.env.AUTH_TOKEN == null) {
+  console.warn("No AUTH_TOKEN environment variable set, access to some actions will be restricted...");
+}
 
 var projects = require('./projects.js')
 var dict = projects.setup();
@@ -11,6 +21,7 @@ var expiration = 600; // 10 minutes
 console.log("Loaded " + (dict.size + 1) + " projects into memory...");
 
 var github = require('./github.js')
+var observables = require('./observables.js')
 
 // launch site
 var app = express()
@@ -24,6 +35,47 @@ app.get('/meta', function(request, response) {
    response.send({ projects: dict.size });
 });
 
+app.get('/refresh', function(request, response) {
+
+  if (process.env.AUTH_TOKEN == null) {
+    response.status(403).send("unable to authenticate");
+    return;
+  }
+
+  if (request.get("Authorization") != "TOKEN " + process.env.AUTH_TOKEN) {
+    response.status(403).send("user not permitted");
+    return;
+  }
+
+  var array = { };
+
+  github
+    .computeIssueCounts(dict)
+    .subscribe(
+      function (map) {
+        array[map.project] = map.count;
+      },
+      function (err) {
+        observables.log(err, response);
+      },
+      function () {
+          console.log('Completed, storing in memcached');
+
+          var client = memjs.Client.create();
+
+          client.set("issue-count-all", JSON.stringify(array), function(err, val) {
+            if (err != null) {
+              console.log(err);
+            }
+
+            response.send({ issueCount: array });
+
+          }, expiration);
+      }
+    );
+});
+
+
 // /issues/count?project={blah}
 // {blah} is just the project name - URL encoded/decoded
 
@@ -32,8 +84,21 @@ app.get('/issues/count', function(request, response) {
 
   if (projectName == null)
   {
-     response.status(400).send('Missing querystring parameter: \'project\'');
-     return;
+    // no project specified -> return all results
+    var client = memjs.Client.create();
+    client.get("issue-count-all", function(err, val) {
+
+      if (err != null) {
+         console.log(err);
+         response.status(500).send('Unable to connect to store');
+      }
+
+       var text = val.toString();
+       var json = JSON.parse(text);
+
+       response.send(json);
+      });
+    return;
   }
 
   var projectJson = dict.get(projectName);
@@ -59,22 +124,27 @@ app.get('/issues/count', function(request, response) {
     if (!isCached) {
       console.log("value for \'" + key + "\' not cached");
 
-      var path = projectJson.issueCount;
+      github
+        .request(projectJson.issueCount)
+        .subscribe(
+          function (issues) {
+            var count = issues.length;
 
-      github.request(path, function(err, res){
-        var count = res.length;
+            client.set(key, count.toString(), function(err, val) {
+              if (err != null) {
+                console.log(err);
+              }
 
-        client.set(key, count.toString(), function(err, val) {
-          if (err != null) {
-            console.log(err);
+              console.log("stored value: \'" + key + "\' - \'" + val.toString() + "\'");
+
+              response.send({ cached: false, result: count });
+            }, expiration);
+
+          },
+          function (err) {
+            observables.log(err, response);
           }
-
-          console.log("stored value: \'" + key + "\' - \'" + val.toString() + "\'");
-
-          response.send({ cached: false, result: count });
-        }, expiration);
-      });
-
+      );
     } else {
       var str = val.toString();
       var count = parseInt(str);
