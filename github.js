@@ -30,12 +30,6 @@ var request = function (uri) {
   return Rx.Observable.fromPromise(promise);
 };
 
-var getProjectIssueCount = function(project, urlProperty) {
-  var name = project.name;
-  var url = project.counts[urlProperty];
-  return getProjectCount(name, url, urlProperty);
-}
-
 var getProjectCount = function(name, path, key) {
   console.log("Fetching issue count (" + key + ") for project: \'" + name + "\'...");
 
@@ -56,15 +50,6 @@ var getProjectCount = function(name, path, key) {
         return Rx.Observable.fromPromise(
           Promise.resolve({ 'project': name, 'count': response.body.length, 'type': key })
         );
-    })
-    .mergeAll();
-}
-
-var computeIssueCounts = function(projects, urlProperty) {
-  return Rx.Observable.from(projects)
-    .take(2)
-    .select(function (project) {
-      return getProjectIssueCount(project[1], urlProperty);
     })
     .mergeAll();
 }
