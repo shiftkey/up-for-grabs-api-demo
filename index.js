@@ -20,6 +20,7 @@ var dict = projects.setup();
 console.log("Loaded " + (dict.size + 1) + " projects into memory...");
 
 var github = require('./github.js')
+var observables = require('./observables.js')
 
 // launch site
 var app = express()
