@@ -9,6 +9,7 @@
   "dependencies": {
     "body-parser": "^1.14.2",
     "express": "^4.13.3",
+    "jackrabbit": "^4.3.0",
     "memjs": "^0.8.9",
     "request-promise": "^1.0.2",
     "rx": "^4.0.7",

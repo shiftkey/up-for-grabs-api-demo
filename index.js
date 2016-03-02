@@ -1,27 +1,20 @@
 var express = require('express')
 var bodyParser = require('body-parser')
+var jackrabbit = require('jackrabbit')
 var memjs = require('memjs')
 var Rx = require('rx');
 
-if (process.env.GITHUB_TOKEN == null) {
-  console.warn("No GITHUB_TOKEN environment variable set, unauthenticated access is very limited...");
-} else {
-  console.log("Found GITHUB_TOKEN environment variable, authenticated requests permit much more usage...");
-}
+//export RABBIT_URL=amqp://localhost
 
-if (process.env.AUTH_TOKEN == null) {
-  console.warn("No AUTH_TOKEN environment variable set, access to some actions will be restricted...");
-}
+var rabbit = jackrabbit(process.env.RABBIT_URL);
+var exchange = rabbit.default();
+var TASK_QUEUE_KEY = 'task_queue';
+var taskQueue = exchange.queue({ name: TASK_QUEUE_KEY, durable: true });
 
 var projects = require('./projects.js')
 var dict = projects.setup();
 
-var expiration = 600; // 10 minutes
-
 console.log("Loaded " + (dict.size + 1) + " projects into memory...");
-
-var github = require('./github.js')
-var observables = require('./observables.js')
 
 // launch site
 var app = express()
@@ -47,32 +40,9 @@ app.get('/refresh', function(request, response) {
     return;
   }
 
-  var array = { };
+  exchange.publish("issue-count-all", { key: TASK_QUEUE_KEY });
 
-  github
-    .computeIssueCounts(dict)
-    .subscribe(
-      function (map) {
-        array[map.project] = map.count;
-      },
-      function (err) {
-        observables.log(err, response);
-      },
-      function () {
-          console.log('Completed, storing in memcached');
-
-          var client = memjs.Client.create();
-
-          client.set("issue-count-all", JSON.stringify(array), function(err, val) {
-            if (err != null) {
-              console.log(err);
-            }
-
-            response.send({ issueCount: array });
-
-          }, expiration);
-      }
-    );
+  response.status(201).send();
 });
 
 
@@ -124,27 +94,8 @@ app.get('/issues/count', function(request, response) {
     if (!isCached) {
       console.log("value for \'" + key + "\' not cached");
 
-      github
-        .request(projectJson.issueCount)
-        .subscribe(
-          function (issues) {
-            var count = issues.length;
-
-            client.set(key, count.toString(), function(err, val) {
-              if (err != null) {
-                console.log(err);
-              }
-
-              console.log("stored value: \'" + key + "\' - \'" + val.toString() + "\'");
-
-              response.send({ cached: false, result: count });
-            }, expiration);
-
-          },
-          function (err) {
-            observables.log(err, response);
-          }
-      );
+      exchange.publish(projectName, { key: TASK_QUEUE_KEY });
+      response.status(204).send();
     } else {
       var str = val.toString();
       var count = parseInt(str);
