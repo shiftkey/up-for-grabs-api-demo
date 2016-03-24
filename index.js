@@ -18,6 +18,8 @@ var taskQueue = exchange.queue({ name: TASK_QUEUE_KEY, durable: true });
 var projects = require('./projects.js')
 var dict = projects.setup();
 
+var ISSUE_COUNT_ALL_CACHE_KEY = 'issue-count-all';
+
 console.log("Loaded " + (dict.size + 1) + " projects into memory...");
 
 // launch site
@@ -44,7 +46,7 @@ app.get('/refresh', function(request, response) {
     return;
   }
 
-  exchange.publish("issue-count-all", { key: TASK_QUEUE_KEY });
+  exchange.publish(ISSUE_COUNT_ALL_CACHE_KEY, { key: TASK_QUEUE_KEY });
 
   response.status(201).send();
 });
@@ -60,7 +62,7 @@ app.get('/issues/count', function(request, response) {
   {
     // no project specified -> return all results
     var client = memjs.Client.create();
-    client.get("issue-count-all", function(err, val) {
+    client.get(ISSUE_COUNT_ALL_CACHE_KEY, function(err, val) {
 
       if (err != null) {
         console.log(err);

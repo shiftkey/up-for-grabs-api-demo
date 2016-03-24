@@ -18,6 +18,8 @@ var rabbit = jackrabbit(process.env.RABBIT_URL);
 var exchange = rabbit.default();
 var taskQueue = exchange.queue({ name: 'task_queue', durable: true });
 
+var ISSUE_COUNT_ALL_CACHE_KEY = 'issue-count-all';
+
 function getAllIssues(ack) {
   var array = {};
 
@@ -37,19 +39,23 @@ function getAllIssues(ack) {
 
           var memclient = memjs.Client.create();
 
-          memclient.set("issue-count-all", JSON.stringify(array), function(err, val) {
+          memclient.set(ISSUE_COUNT_ALL_CACHE_KEY, JSON.stringify(array), function(err, val) {
             if (err != null) {
               console.log(err);
             }
-                    
+
             ack();
           }, expiration);
       }
     );
 }
 
+function getProjectCachecKey(projectName) {
+  return "issue-count-" + projectName;
+}
+
 function getProjectIssues(projectName, ack) {
-  var key = "issue-count-" + projectName;
+  var key = getProjectCachecKey(projectName);
 
   var projectJson = dict.get(projectName);
 
@@ -75,7 +81,6 @@ function getProjectIssues(projectName, ack) {
             console.log("stored value: \'" + key + "\' - \'" + val.toString() + "\'");
             ack();
           }, expiration);
-
         },
         function (err) {
           console.log(err, response);
@@ -84,10 +89,13 @@ function getProjectIssues(projectName, ack) {
     );
 }
 taskQueue.consume(function onMessage(key, ack) {
-  console.log('received:', key);
+  console.log('Received:', key);
+
+  var cacheKey = key === ISSUE_COUNT_ALL_CACHE_KEY ? key : getProjectCachecKey(key);
 
   var memclient = memjs.Client.create();
-  memclient.get(key, function(err, val) {
+
+  memclient.get(cacheKey, function(err, val) {
     if (err != null) {
        console.log(err);
        ack();
@@ -100,7 +108,7 @@ taskQueue.consume(function onMessage(key, ack) {
       return;
     }
 
-    if(key === 'issue-count-all') {
+    if(key === ISSUE_COUNT_ALL_CACHE_KEY) {
       getAllIssues(ack);
     } else {
       getProjectIssues(key, ack);
