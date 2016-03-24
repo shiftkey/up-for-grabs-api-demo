@@ -8,10 +8,6 @@ if (process.env.GITHUB_TOKEN == null) {
   console.log("Found GITHUB_TOKEN environment variable, authenticated requests permit much more usage...");
 }
 
-if (process.env.AUTH_TOKEN == null) {
-  console.warn("No AUTH_TOKEN environment variable set, access to some actions will be restricted...");
-}
-
 var expiration = 600; // 10 minutes
 
 var github = require('./github');
@@ -22,7 +18,9 @@ var rabbit = jackrabbit(process.env.RABBIT_URL);
 var exchange = rabbit.default();
 var taskQueue = exchange.queue({ name: 'task_queue', durable: true });
 
-function getAllIssues() {
+function getAllIssues(ack) {
+  var array = {};
+
   github
     .computeIssueCounts(dict)
     .subscribe(
@@ -31,6 +29,8 @@ function getAllIssues() {
       },
       function (err) {
         console.log(err, response);
+
+        ack();
       },
       function () {
           console.log('Completed, storing in memcached');
@@ -41,23 +41,25 @@ function getAllIssues() {
             if (err != null) {
               console.log(err);
             }
-
-            response.send({ issueCount: array });
-
+                    
+            ack();
           }, expiration);
       }
     );
 }
 
-function getProjectIssues(projectName) {
+function getProjectIssues(projectName, ack) {
   var key = "issue-count-" + projectName;
 
   var projectJson = dict.get(projectName);
 
   if (projectJson == null) {
-     response.status(400).send('Unknown project: \'' + projectName + '\'');
-     return;
+    console.log('Could not find project: ' + projectName);
+    return;
   }
+
+  console.log('Getting stats for : ' + projectName);
+
   github
       .request(projectJson.issueCount)
       .subscribe(
@@ -71,13 +73,13 @@ function getProjectIssues(projectName) {
             }
 
             console.log("stored value: \'" + key + "\' - \'" + val.toString() + "\'");
-
-            response.send({ cached: false, result: count });
+            ack();
           }, expiration);
 
         },
         function (err) {
           console.log(err, response);
+          ack();
         }
     );
 }
@@ -99,9 +101,9 @@ taskQueue.consume(function onMessage(key, ack) {
     }
 
     if(key === 'issue-count-all') {
-      getAllIssues();
+      getAllIssues(ack);
     } else {
-      getProjectIssues(key);
+      getProjectIssues(key, ack);
     }
   });
 });

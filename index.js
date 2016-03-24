@@ -6,6 +6,10 @@ var Rx = require('rx');
 
 //export RABBIT_URL=amqp://localhost
 
+if (process.env.AUTH_TOKEN == null) {
+  console.warn("No AUTH_TOKEN environment variable set, access to some actions will be restricted...");
+}
+
 var rabbit = jackrabbit(process.env.RABBIT_URL);
 var exchange = rabbit.default();
 var TASK_QUEUE_KEY = 'task_queue';
@@ -59,15 +63,21 @@ app.get('/issues/count', function(request, response) {
     client.get("issue-count-all", function(err, val) {
 
       if (err != null) {
-         console.log(err);
-         response.status(500).send('Unable to connect to store');
+        console.log(err);
+        response.status(500).send('Unable to connect to store');
+        return;
       }
 
-       var text = val.toString();
-       var json = JSON.parse(text);
+      if(!val) {
+        response.status(204).send();
+        return;
+      }
 
-       response.send(json);
-      });
+      var text = val.toString();
+      var json = JSON.parse(text);
+
+      response.send(json);
+    });
     return;
   }
 
