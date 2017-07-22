@@ -10,6 +10,8 @@
     "body-parser": "^1.14.2",
     "express": "^4.13.3",
     "memjs": "^0.8.9",
+    "parse-link-header": "^0.4.1",
+    "promise": "^7.1.1",
     "request-promise": "^1.0.2",
     "rx": "^4.0.7",
     "yamljs": "^0.2.4"
